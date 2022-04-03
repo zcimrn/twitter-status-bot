@@ -131,11 +131,15 @@ func getFollowingUsers(userId string) ([]User, error) {
     return jsonBody.Data, err
 }
 
+func pretty(name, username string) string {
+    return "[" + name + "](https://twitter.com/" + username + ")"
+}
+
 func getData(users []User, delay time.Duration) ([]UserData, error) {
     var data []UserData
     for _, user := range users {
         time.Sleep(delay)
-        log.Println(user.Name + " (https://twitter.com/" + user.Username + ")")
+        log.Println(pretty(user.Name, user.Username))
         followingUsers, err := getFollowingUsers(user.Id)
         if err != nil {
             return data, err
@@ -230,6 +234,7 @@ func sendMessage(chatId, text string) error {
         url.Values{
             "chat_id": {chatId},
             "text": {text},
+            "parse_mode": {"MarkdownV2"},
             "disable_web_page_preview": {"true"},
         },
     )
@@ -241,9 +246,9 @@ func sendMessage(chatId, text string) error {
 }
 
 func sendUpdates(updateUser *UserData, text string, users []User) error {
-    text = updateUser.Name + " (https://twitter.com/" + updateUser.Username + ") " + text
+    text = pretty(updateUser.Name, updateUser.Username) + " " + text + ":"
     for _, user := range users {
-        text += "\n" + user.Name + " (https://twitter.com/" + user.Username + ")"
+        text += "\n" + pretty(user.Name, user.Username)
     }
     log.Println(text)
     for _, chatId := range TELEGRAM_CHAT_IDS {
@@ -256,16 +261,19 @@ func sendUpdates(updateUser *UserData, text string, users []User) error {
 }
 
 func update(user *UserData, followingUsers []User) error {
+    log.Println("updating " + pretty(user.Name, user.Username))
+    /*
     users := diff(user.Following, followingUsers)
     if len(users) > 0 {
-        err := sendUpdates(user, "unfollowed:", users)
+        err := sendUpdates(user, "unfollowed", users)
         if err != nil {
             return err
         }
     }
-    users = diff(followingUsers, user.Following)
+    */
+    users := diff(followingUsers, user.Following)
     if len(users) > 0 {
-        err := sendUpdates(user, "followed:", users)
+        err := sendUpdates(user, "followed", users)
         if err != nil {
             return err
         }
@@ -302,7 +310,7 @@ func main() {
     }
     log.Printf("working with users:")
     for _, user := range data {
-        log.Println(user.Name + " (https://twitter.com/" + user.Username + ")")
+        log.Println(pretty(user.Name, user.Username))
     }
     err = monitor(data, 60 * time.Second)
     if err != nil {
