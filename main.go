@@ -31,6 +31,7 @@ var (
 )
 
 func readTelegramChatIds() ([]string, error) {
+    log.Printf("reading telegram chat ids from \"telegram_chat_ids\"")
     var telegramChatIds []string
     file, err := os.Open("telegram_chat_ids")
     if err != nil {
@@ -45,6 +46,7 @@ func readTelegramChatIds() ([]string, error) {
 }
 
 func readData() ([]UserData, error) {
+    log.Printf("reading data from \"data.json\"")
     var data []UserData
     file, err := os.Open("data.json")
     if err != nil {
@@ -60,6 +62,7 @@ func readData() ([]UserData, error) {
 }
 
 func readUsernames(usernamesFile string) ([]string, error) {
+    log.Printf("reading usernames from \"%s\" file", usernamesFile)
     var usernames []string
     file, err := os.Open(usernamesFile)
     if err != nil {
@@ -73,7 +76,12 @@ func readUsernames(usernamesFile string) ([]string, error) {
     return usernames, scanner.Err()
 }
 
+func pretty(name, username string) string {
+    return "[" + name + "](https://twitter.com/" + username + ")"
+}
+
 func getUsers(usernames []string) ([]User, error) {
+    log.Printf("getting users by usernames")
     var users []User
     client := &http.Client{}
     for i := 0; i < len(usernames); i += 100 {
@@ -103,56 +111,73 @@ func getUsers(usernames []string) ([]User, error) {
             return users, err
         }
         for _, user := range jsonBody.Data {
-            log.Println(pretty(user.Name, user.Username))
+            log.Printf(pretty(user.Name, user.Username))
             users = append(users, user)
         }
     }
     return users, nil
 }
 
-func getFollowingUsers(userId string) ([]User, error) {
+func getFollowingUsers(userId string, delay time.Duration) ([]User, error) {
     var users []User
     client := &http.Client{}
-    req, err := http.NewRequest("GET", TWITTER_API + userId + "/following?max_results=1000", nil)
-    if err != nil {
-        return users, err
+    for nextToken := "";; {
+        time.Sleep(delay)
+        query := TWITTER_API + userId + "/following?max_results=1000"
+        if nextToken != "" {
+            query += "&pagination_token=" + nextToken
+        }
+        req, err := http.NewRequest("GET", query, nil)
+        if err != nil {
+            return users, err
+        }
+        req.Header.Add("Authorization", "Bearer " + TWITTER_TOKEN)
+        resp, err := client.Do(req)
+        if err != nil {
+            return users, err
+        }
+        body, err := io.ReadAll(resp.Body)
+        resp.Body.Close()
+        if err != nil {
+            return users, err
+        }
+        var jsonBody struct {
+            Data []User `json:"data"`
+            Meta struct {
+                ResultCount int `json:"result_count"`
+                NextToken string `json:"next_token"`
+            } `json:"meta"`
+        }
+        err = json.Unmarshal(body, &jsonBody)
+        if err != nil {
+            return users, err
+        }
+        users = append(users, jsonBody.Data...)
+        nextToken = jsonBody.Meta.NextToken
+        if nextToken == "" {
+            break
+        }
     }
-    req.Header.Add("Authorization", "Bearer " + TWITTER_TOKEN)
-    resp, err := client.Do(req)
-    if err != nil {
-        return users, err
-    }
-    body, err := io.ReadAll(resp.Body)
-    resp.Body.Close()
-    if err != nil {
-        return users, err
-    }
-    var jsonBody struct {
-        Data []User
-    }
-    err = json.Unmarshal(body, &jsonBody)
-    return jsonBody.Data, err
-}
-
-func pretty(name, username string) string {
-    return "[" + name + "](https://twitter.com/" + username + ")"
+    return users, nil
 }
 
 func getData(users []User, delay time.Duration) ([]UserData, error) {
+    log.Printf("getting users data")
     var data []UserData
     for _, user := range users {
-        time.Sleep(delay)
-        log.Println(pretty(user.Name, user.Username))
-        followingUsers, err := getFollowingUsers(user.Id)
+        log.Printf("%s getting followings", pretty(user.Name, user.Username))
+        followingUsers, err := getFollowingUsers(user.Id, delay)
         if err != nil {
             return data, err
         }
+        log.Printf("%s got %d followings", pretty(user.Name, user.Username), len(followingUsers))
         data = append(data, UserData{user, followingUsers})
     }
     return data, nil
 }
 
 func writeData(data []UserData) error {
+    log.Printf("writing data to \"data.json\"")
     bytes, err := json.Marshal(data)
     if err != nil {
         return err
@@ -167,7 +192,7 @@ func writeData(data []UserData) error {
 }
 
 func prepare() ([]UserData, error) {
-    log.Println("preparing")
+    log.Printf("preparing")
 
     TWITTER_TOKEN = os.Getenv("TWITTER_TOKEN")
     TWITTER_API = "https://api.twitter.com/2/users/"
@@ -186,25 +211,19 @@ func prepare() ([]UserData, error) {
     flag.Parse()
 
     if usernamesFile == "" {
-        log.Println("usernames file not specified, trying to load saved data from \"data.json\"")
+        log.Printf("usernames file not specified")
         return readData()
     }
-
-    log.Println("usernames file \"" + usernamesFile + "\", trying to load usernames")
 
     usernames, err := readUsernames(usernamesFile)
     if err != nil {
         return data, err
     }
 
-    log.Println("getting users by usernames")
-
     users, err := getUsers(usernames)
     if err != nil {
         return data, err
     }
-
-    log.Println("creating new data")
 
     data, err = getData(users, 60 * time.Second)
     if err != nil {
@@ -249,11 +268,12 @@ func sendMessage(chatId, text string) error {
 }
 
 func sendUpdates(updateUser *UserData, text string, users []User) error {
+    log.Printf("sending updates")
     text = pretty(updateUser.Name, updateUser.Username) + " " + text + ":"
     for _, user := range users {
         text += "\n" + pretty(user.Name, user.Username)
     }
-    log.Println(text)
+    log.Printf(text)
     for _, chatId := range TELEGRAM_CHAT_IDS {
         err := sendMessage(chatId, text)
         if err != nil {
@@ -264,7 +284,7 @@ func sendUpdates(updateUser *UserData, text string, users []User) error {
 }
 
 func update(user *UserData, followingUsers []User) error {
-    log.Println("updating " + pretty(user.Name, user.Username))
+    log.Printf("%s updating", pretty(user.Name, user.Username))
     /*
     users := diff(user.Following, followingUsers)
     if len(users) > 0 {
@@ -286,14 +306,15 @@ func update(user *UserData, followingUsers []User) error {
 }
 
 func monitor(data []UserData, delay time.Duration) error {
-    log.Println("monitoring")
+    log.Printf("monitoring")
     userCount := len(data)
     for i := 0; i < userCount; i = (i + 1) % userCount {
-        time.Sleep(delay)
-        followingUsers, err := getFollowingUsers(data[i].Id)
+        log.Printf("%s getting followings", pretty(data[i].Name, data[i].Username))
+        followingUsers, err := getFollowingUsers(data[i].Id, delay)
         if err != nil {
             return err
         }
+        log.Printf("%s got %d followings", pretty(data[i].Name, data[i].Username), len(followingUsers))
         err = update(&data[i], followingUsers)
         if err != nil {
             return err
@@ -313,7 +334,7 @@ func main() {
     }
     log.Printf("working with users:")
     for _, user := range data {
-        log.Println(pretty(user.Name, user.Username))
+        log.Printf(pretty(user.Name, user.Username))
     }
     err = monitor(data, 60 * time.Second)
     if err != nil {
