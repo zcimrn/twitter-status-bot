@@ -102,7 +102,10 @@ func getUsers(usernames []string) ([]User, error) {
         if err != nil {
             return users, err
         }
-        users = append(users, jsonBody.Data...)
+        for _, user := range jsonBody.Data {
+            log.Println(pretty(user.Name, user.Username))
+            users = append(users, user)
+        }
     }
     return users, nil
 }
