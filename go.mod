@@ -1,3 +1,3 @@
-module github.com/zcimrn/twitter_status_bot
+module github.com/zcimrn/twitter-status-bot
 
 go 1.18
