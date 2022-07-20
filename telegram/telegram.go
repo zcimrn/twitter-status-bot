@@ -42,7 +42,6 @@ func SendMessage(chatId int, text string, args ...int) error {
 	if len(args) > 0 {
 		replyToMessageId = args[0]
 	}
-	log.Printf("message: '%s'", text)
 	jsonReq := struct {
 		ChatId                int    `json:"chat_id"`
 		Text                  string `json:"text"`
