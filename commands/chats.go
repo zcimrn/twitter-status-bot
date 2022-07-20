@@ -5,13 +5,13 @@ import (
   "strconv"
   "strings"
 
-  "github.com/zcimrn/twitter-status-bot/config"
+  "github.com/zcimrn/twitter-status-bot/data"
   "github.com/zcimrn/twitter-status-bot/telegram"
   "github.com/zcimrn/twitter-status-bot/tools"
 )
 
 func getChats(chatId, messageId int) {
-  chats := Config.GetChats()
+  chats := Data.GetChats()
   if len(chats) == 0 {
     telegram.SendMessage(chatId, "Чатов пока нет", messageId)
     return
@@ -40,7 +40,7 @@ func addChat(chatId, messageId int, args []string) {
     return
   }
   commandChatDesc := strings.Join(args[1:], " ")
-  Config.AddChat(&config.Chat{ commandChatId, commandChatDesc })
+  Data.AddChat(&data.Chat{ commandChatId, commandChatDesc })
   telegram.SendMessage(chatId, fmt.Sprintf("Добавлен чат\n`%d` %s", commandChatId, tools.Escape(commandChatDesc)), messageId)
 }
 
@@ -54,7 +54,7 @@ func deleteChat(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, "`id` должен быть числом", messageId)
     return
   }
-  if Config.DeleteChat(commandChatId) {
+  if Data.DeleteChat(commandChatId) {
     telegram.SendMessage(chatId, fmt.Sprintf("Удалён чат c `id` `%d`", commandChatId), messageId)
   } else {
     telegram.SendMessage(chatId, fmt.Sprintf("Нет чата с `id` `%d`", commandChatId), messageId)

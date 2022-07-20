@@ -8,7 +8,7 @@ import (
 )
 
 func getTelegramToken(chatId, messageId int) {
-  telegram.SendMessage(chatId, fmt.Sprintf("Telegram token:\n`%s`", tools.EscapeCode(Config.GetTelegramToken())), messageId)
+  telegram.SendMessage(chatId, fmt.Sprintf("Telegram token:\n`%s`", tools.EscapeCode(Data.GetTelegramToken())), messageId)
 }
 
 func setTelegramToken(chatId, messageId int, args []string) {
@@ -21,6 +21,6 @@ func setTelegramToken(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, fmt.Sprintf("Не удалось установить Telegram token:\n`%s`", tools.EscapeCode(token)), messageId)
     return
   }
-  Config.SetTelegramToken(token)
+  Data.SetTelegramToken(token)
   telegram.SendMessage(chatId, fmt.Sprintf("Установлен Telegram token:\n`%s`", tools.EscapeCode(token)), messageId)
 }

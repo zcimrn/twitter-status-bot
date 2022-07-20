@@ -6,24 +6,25 @@ import (
   "time"
 
   "github.com/zcimrn/twitter-status-bot/commands"
-  "github.com/zcimrn/twitter-status-bot/config"
   "github.com/zcimrn/twitter-status-bot/data"
   "github.com/zcimrn/twitter-status-bot/telegram"
   "github.com/zcimrn/twitter-status-bot/twitter"
 )
 
-var (
-  Config = &config.Config{}
-  Data = &data.Data{}
-)
-
-func monitorTwitter(delay time.Duration) {
+func monitorTwitter(data *data.Data, delay time.Duration) {
   for {
-    user := Data.GetNextUser()
+    var user *twitter.User
+    for {
+      user = data.GetNextUser()
+      if user != nil {
+        break
+      }
+      log.Printf("error: 'empty data'")
+      log.Printf("waiting...")
+      time.Sleep(delay)
+    }
     updates := user.Update(delay)
-    user.Pretty()
-    Data.UpdateUser(user)
-    if len(updates) > 0 {
+    if data.UpdateUser(user) && len(updates) > 0 {
       telegram.SendUpdates(user, updates)
     }
   }
@@ -34,9 +35,10 @@ func monitorTelegram() {
   for {
     updates, err := telegram.GetUpdates(lastUpdateId + 1)
     if err != nil {
-      log.Printf("error: '%s'", err)
+      log.Printf("telegram get updates error: '%s'", err)
     }
     for i := 0; i < len(updates); i++ {
+      log.Printf("exec command")
       go commands.Exec(&updates[i].Message)
       lastUpdateId = updates[i].Id
     }
@@ -45,25 +47,16 @@ func monitorTelegram() {
 
 func main() {
   log.Printf("initializing...")
-  err := Config.Init("config.json")
-  if err != nil {
+  data := &data.Data{}
+  if err := data.Init("data.json"); err != nil {
     log.Printf("error: '%s'", err)
     return
   }
-  log.Printf("config: '%+v'", Config)
-  telegram.Config = Config
-  twitter.Config = Config
-  commands.Config = Config
-  err = Data.Init("data.json")
-  if err != nil {
-    log.Printf("error: '%s'", err)
-    return
-  }
-  commands.Data = Data
+  commands.Data = data
   log.Printf("initialized")
   var waitGroup sync.WaitGroup
   waitGroup.Add(2)
-  go monitorTwitter(60 * time.Second)
+  go monitorTwitter(data, 60 * time.Second)
   go monitorTelegram()
   waitGroup.Wait()
 }

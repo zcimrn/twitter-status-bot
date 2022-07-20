@@ -2,14 +2,10 @@ package twitter
 
 import (
   "encoding/json"
-  "errors"
+  "fmt"
   "io"
   "net/http"
-
-  "github.com/zcimrn/twitter-status-bot/config"
 )
-
-var Config *config.Config
 
 func TestToken(token string) bool {
   client := &http.Client{}
@@ -35,14 +31,14 @@ func api(query string) ([]byte, error) {
   if err != nil {
     return nil, err
   }
-  req.Header.Add("Authorization", "Bearer " + Config.GetTwitterToken())
+  req.Header.Add("Authorization", "Bearer " + getToken())
   resp, err := client.Do(req)
   if err != nil {
     return nil, err
   }
   if resp.StatusCode != 200 {
     resp.Body.Close()
-    return nil, errors.New(query + " - " + resp.Status)
+    return nil, fmt.Errorf("%s - %s", query, resp.Status)
   }
   respBody, err := io.ReadAll(resp.Body)
   resp.Body.Close()
@@ -59,7 +55,7 @@ func api(query string) ([]byte, error) {
     return nil, err
   }
   if len(jsonResp.Errors) > 0 {
-    return nil, errors.New(jsonResp.Errors[0].Detail)
+    return nil, fmt.Errorf(jsonResp.Errors[0].Detail)
   }
   return respBody, nil
 }

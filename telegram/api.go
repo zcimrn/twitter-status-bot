@@ -6,12 +6,6 @@ import (
   "fmt"
   "io"
   "net/http"
-
-  "github.com/zcimrn/twitter-status-bot/config"
-)
-
-var (
-  Config *config.Config
 )
 
 func TestToken(token string) bool {
@@ -27,7 +21,7 @@ func TestToken(token string) bool {
 }
 
 func api(method string, reqBody []byte) ([]byte, error) {
-  url := "https://api.telegram.org/bot" + Config.GetTelegramToken() + "/" + method
+  url := "https://api.telegram.org/bot" + getToken() + "/" + method
   resp, err := http.Post(url, "application/json", bytes.NewReader(reqBody))
   if err != nil {
     return nil, err

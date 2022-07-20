@@ -9,65 +9,29 @@ import (
   "sort"
   "sync"
 
+  "github.com/zcimrn/twitter-status-bot/telegram"
   "github.com/zcimrn/twitter-status-bot/twitter"
 )
 
-type Data struct {
-  FileName string `json:"file_name"`
-  LastUserIndex int `json:"last_user_index"`
-  Users []twitter.User `json:"users"`
-  mutex sync.RWMutex `json:"-"`
-  emptyMutex sync.Mutex `json:"-"`
+type Admin struct {
+  Id int `json:"id"`
+  Desc string `json:"desc"`
 }
 
-func (data *Data) Init(fileName string) error {
-  data.mutex.Lock()
-  data.emptyMutex.Lock()
-  data.LastUserIndex = -1
-  data.Users = nil
-  data.FileName = fileName
-  err := data.load()
-  if err != nil {
-    log.Printf("error: '%s'", err)
-  }
-  if data.FileName == "" {
-    data.emptyMutex.Unlock()
-    data.mutex.Unlock()
-    return fmt.Errorf("file_name is empty")
-  }
-  if data.LastUserIndex < -1 {
-    data.emptyMutex.Unlock()
-    data.mutex.Unlock()
-    return fmt.Errorf("last_user_index < -1")
-  }
-  if data.LastUserIndex >= len(data.Users) {
-    data.emptyMutex.Unlock()
-    data.mutex.Unlock()
-    return fmt.Errorf("last_user_index > %d", len(data.Users) - 1)
-  }
-  for i := 0; i < len(data.Users); i++ {
-    err = data.Users[i].Validate()
-    if err != nil {
-      data.emptyMutex.Unlock()
-      data.mutex.Unlock()
-      return fmt.Errorf("user %d error: '%s'", i + 1, err)
-    }
-    for j := i + 1; j < len(data.Users); j++ {
-      if data.Users[j].Id == data.Users[i].Id {
-        data.emptyMutex.Unlock()
-        data.mutex.Unlock()
-        return fmt.Errorf("users %d and %d has the same ids", i + 1, j + 1)
-      }
-    }
-  }
-  sort.Slice(data.Users, func (i, j int) bool {
-    return data.Users[i].Id < data.Users[j].Id
-  })
-  if len(data.Users) > 0 {
-    data.emptyMutex.Unlock()
-  }
-  data.mutex.Unlock()
-  return nil
+type Chat struct {
+  Id int `json:"id"`
+  Desc string `json:"desc"`
+}
+
+type Data struct {
+  FileName string `json:"file_name"`
+  TelegramToken string `json:"telegram_token"`
+  TwitterToken string `json:"twitter_token"`
+  Admins []Admin `json:"admins"`
+  Chats []Chat `json:"chats"`
+  LastIndex int `json:"last_user_index"`
+  Users []twitter.User `json:"users"`
+  mutex sync.RWMutex `json:"-"`
 }
 
 func (data *Data) load() error {
@@ -107,113 +71,90 @@ func (data *Data) save() error {
   return nil
 }
 
-func (data *Data) GetUsers() []twitter.User {
-  data.mutex.RLock()
-  var users []twitter.User
+func (data *Data) Init(fileName string) error {
+  data.mutex.Lock()
+  data.FileName = fileName
+  data.TelegramToken = ""
+  data.TwitterToken = ""
+  data.Admins = nil
+  data.Chats = nil
+  data.LastIndex = -1
+  data.Users = nil
+  if err := data.load(); err != nil {
+    log.Printf("error: '%s'", err)
+  }
+  if data.FileName == "" {
+    data.mutex.Unlock()
+    return fmt.Errorf("file_name is empty")
+  }
+  if data.TelegramToken == "" {
+    data.mutex.Unlock()
+    return fmt.Errorf("telegram_token is empty")
+  }
+  if !telegram.TestToken(data.TelegramToken) {
+    data.mutex.Unlock()
+    return fmt.Errorf("telegram_token doesn't work")
+  }
+  telegram.SetToken(data.TelegramToken)
+  if data.TwitterToken == "" {
+    data.mutex.Unlock()
+    return fmt.Errorf("twitter_token is empty")
+  }
+  if !twitter.TestToken(data.TwitterToken) {
+    data.mutex.Unlock()
+    return fmt.Errorf("twitter_token doesn't work")
+  }
+  twitter.SetToken(data.TwitterToken)
+  if len(data.Admins) == 0 {
+    data.mutex.Unlock()
+    return fmt.Errorf("not enough admins")
+  }
+  for i := 0; i < len(data.Admins); i++ {
+    for j := i + 1; j < len(data.Admins); j++ {
+      if data.Admins[j].Id == data.Admins[i].Id {
+        data.mutex.Unlock()
+        return fmt.Errorf("admins %d and %d have the same ids", i + 1, j + 1)
+      }
+    }
+  }
+  sort.Slice(data.Admins, func (i, j int) bool {
+    return data.Admins[i].Id < data.Admins[j].Id
+  })
+  for i := 0; i < len(data.Chats); i++ {
+    for j := i + 1; j < len(data.Chats); j++ {
+      if data.Chats[j].Id == data.Chats[i].Id {
+        data.mutex.Unlock()
+        return fmt.Errorf("chats %d and %d have the same ids", i + 1, j + 1)
+      }
+    }
+  }
+  sort.Slice(data.Chats, func (i, j int) bool {
+    return data.Chats[i].Id < data.Chats[j].Id
+  })
+  if data.LastIndex < -1 {
+    data.mutex.Unlock()
+    return fmt.Errorf("last_index < -1")
+  }
+  if data.LastIndex >= len(data.Users) {
+    data.mutex.Unlock()
+    return fmt.Errorf("last_index > %d", len(data.Users) - 1)
+  }
   for i := 0; i < len(data.Users); i++ {
-    users = append(users, *data.Users[i].Copy())
-  }
-  data.mutex.RUnlock()
-  return users
-}
-
-func (data *Data) HasUser(id string) bool {
-  data.mutex.RLock()
-  i := sort.Search(len(data.Users), func(i int) bool {
-    return data.Users[i].Id >= id
-  })
-  found := i < len(data.Users) && data.Users[i].Id == id
-  data.mutex.RUnlock()
-  return found
-}
-
-func (data *Data) GetUsersByChatId(id int) []twitter.User {
-  var users []twitter.User
-  data.mutex.RLock()
-  for i := 0; i < len(data.Users); i++ {
-    if data.Users[i].HasChatId(id) {
-      users = append(users, *data.Users[i].Copy())
+    if err := data.Users[i].Validate(); err != nil {
+      data.mutex.Unlock()
+      return fmt.Errorf("user %d error: '%s'", i + 1, err)
+    }
+    for j := i + 1; j < len(data.Users); j++ {
+      if data.Users[j].Id == data.Users[i].Id {
+        data.mutex.Unlock()
+        return fmt.Errorf("users %d and %d has the same ids", i + 1, j + 1)
+      }
     }
   }
-  data.mutex.RUnlock()
-  return users
-}
-
-func (data *Data) UpdateUser(user *twitter.User) bool {
-  data.mutex.Lock()
-  i := sort.Search(len(data.Users), func (i int) bool {
-    return data.Users[i].Id >= user.Id
+  sort.Slice(data.Users, func (i, j int) bool {
+    return data.Users[i].Id < data.Users[j].Id
   })
-  if i == len(data.Users) || data.Users[i].Id != user.Id {
-    data.mutex.Unlock()
-    return false
-  }
-  data.Users[i] = *user
   data.save()
   data.mutex.Unlock()
-  return true
-}
-
-func (data *Data) AddUser(user *twitter.User) bool {
-  data.mutex.Lock()
-  i := sort.Search(len(data.Users), func (i int) bool {
-    return data.Users[i].Id >= user.Id
-  })
-  if i < len(data.Users) && data.Users[i].Id == user.Id {
-    data.emptyMutex.Lock()
-    for _, chatId := range user.GetChatIds() {
-      data.Users[i].AddChatId(chatId)
-    }
-    data.save()
-    data.emptyMutex.Unlock()
-    data.mutex.Unlock()
-    return true
-  }
-  if len(data.Users) > 0 {
-    data.emptyMutex.Lock()
-  }
-  data.Users = append(data.Users[:i], append([]twitter.User{*user}, data.Users[i:]...)...)
-  if data.LastUserIndex >= i {
-    data.LastUserIndex++
-  }
-  data.save()
-  data.emptyMutex.Unlock()
-  data.mutex.Unlock()
-  return false
-}
-
-func (data *Data) DeleteUser(user *twitter.User) bool {
-  data.mutex.Lock()
-  i := sort.Search(len(data.Users), func (i int) bool {
-    return data.Users[i].Id >= user.Id
-  })
-  if i == len(data.Users) || data.Users[i].Id != user.Id {
-    data.mutex.Unlock()
-    return false
-  }
-  data.emptyMutex.Lock()
-  for _, id := range user.GetChatIds() {
-    data.Users[i].DeleteChatId(id)
-  }
-  if len(data.Users[i].GetChatIds()) == 0 {
-    data.Users = append(data.Users[:i], data.Users[i + 1:]...)
-    if data.LastUserIndex >= i {
-      data.LastUserIndex--
-    }
-  }
-  data.save()
-  if len(data.Users) > 0 {
-    data.emptyMutex.Unlock()
-  }
-  data.mutex.Unlock()
-  return true
-}
-
-func (data *Data) GetNextUser() *twitter.User {
-  data.emptyMutex.Lock()
-  data.LastUserIndex = (data.LastUserIndex + 1) % len(data.Users)
-  user := data.Users[data.LastUserIndex].Copy()
-  data.save()
-  data.emptyMutex.Unlock()
-  return user
+  return nil
 }

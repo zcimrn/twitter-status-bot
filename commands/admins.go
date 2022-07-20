@@ -5,13 +5,13 @@ import (
   "strconv"
   "strings"
 
-  "github.com/zcimrn/twitter-status-bot/config"
+  "github.com/zcimrn/twitter-status-bot/data"
   "github.com/zcimrn/twitter-status-bot/telegram"
   "github.com/zcimrn/twitter-status-bot/tools"
 )
 
 func getAdmins(chatId, messageId int) {
-  admins := Config.GetAdmins()
+  admins := Data.GetAdmins()
   if len(admins) == 0 {
     telegram.SendMessage(chatId, "Админов пока нет", messageId)
     return
@@ -40,7 +40,7 @@ func addAdmin(chatId, messageId int, args []string) {
     return
   }
   adminDesc := strings.Join(args[1:], " ")
-  Config.AddAdmin(&config.Admin{ adminId, adminDesc })
+  Data.AddAdmin(&data.Admin{ adminId, adminDesc })
   telegram.SendMessage(chatId, fmt.Sprintf("Добавлен админ:\n`%d` %s", adminId, tools.Escape(adminDesc)), messageId)
 }
 
@@ -54,7 +54,7 @@ func deleteAdmin(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, "`id` должен быть числом", messageId)
     return
   }
-  if Config.DeleteAdmin(adminId) {
+  if Data.DeleteAdmin(adminId) {
     telegram.SendMessage(chatId, fmt.Sprintf("Удалён админ c `id` `%d`", adminId), messageId)
   } else {
     telegram.SendMessage(chatId, fmt.Sprintf("Нет админа с `id` `%d`", adminId), messageId)

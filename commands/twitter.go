@@ -4,12 +4,12 @@ import (
   "fmt"
 
   "github.com/zcimrn/twitter-status-bot/telegram"
-  "github.com/zcimrn/twitter-status-bot/tools"
   "github.com/zcimrn/twitter-status-bot/twitter"
+  "github.com/zcimrn/twitter-status-bot/tools"
 )
 
 func getTwitterToken(chatId, messageId int) {
-  telegram.SendMessage(chatId, fmt.Sprintf("Twitter token:\n`%s`", tools.EscapeCode(Config.GetTwitterToken())), messageId)
+  telegram.SendMessage(chatId, fmt.Sprintf("Twitter token:\n`%s`", tools.EscapeCode(Data.GetTwitterToken())), messageId)
 }
 
 func setTwitterToken(chatId, messageId int, args []string) {
@@ -22,6 +22,6 @@ func setTwitterToken(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, fmt.Sprintf("Не удалось установить Twitter token:\n`%s`", tools.EscapeCode(token)), messageId)
     return
   }
-  Config.SetTwitterToken(token)
+  Data.SetTwitterToken(token)
   telegram.SendMessage(chatId, fmt.Sprintf("Установлен Twitter token:\n`%s`", tools.EscapeCode(token)), messageId)
 }

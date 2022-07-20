@@ -4,15 +4,11 @@ import (
   "log"
   "strings"
 
-  "github.com/zcimrn/twitter-status-bot/config"
   "github.com/zcimrn/twitter-status-bot/data"
   "github.com/zcimrn/twitter-status-bot/telegram"
 )
 
-var (
-  Config *config.Config
-  Data *data.Data
-)
+var Data *data.Data
 
 func Exec(message *telegram.Message) {
   log.Printf("message: '%+v'", message)
@@ -20,7 +16,7 @@ func Exec(message *telegram.Message) {
     log.Printf("error: 'message without text'")
     return
   }
-  if !Config.HasAdmin(message.From.Id) && !Config.HasAdmin(message.Chat.Id) {
+  if !Data.HasAdmin(message.From.Id) && !Data.HasAdmin(message.Chat.Id) {
     log.Printf("error: 'permissions error'")
     return
   }

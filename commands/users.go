@@ -22,7 +22,7 @@ func getUsers(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, "`chat_id` должен быть числом", messageId)
     return
   }
-  if !Config.HasChat(commandChatId) {
+  if !Data.HasChat(commandChatId) {
     telegram.SendMessage(chatId, fmt.Sprintf("Чата `%d` нет в списке", commandChatId), messageId)
     return
   }
@@ -53,7 +53,7 @@ func addUsers(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, "`chat_id` должен быть числом", messageId)
     return
   }
-  if !Config.HasChat(commandChatId) {
+  if !Data.HasChat(commandChatId) {
     telegram.SendMessage(chatId, fmt.Sprintf("Чата `%d` нет в списке", commandChatId), messageId)
     return
   }
@@ -109,7 +109,7 @@ func deleteUsers(chatId, messageId int, args []string) {
     telegram.SendMessage(chatId, "`chat_id` должен быть числом", messageId)
     return
   }
-  if !Config.HasChat(commandChatId) {
+  if !Data.HasChat(commandChatId) {
     telegram.SendMessage(chatId, fmt.Sprintf("Чата `%d` нет в списке", commandChatId), messageId)
     return
   }
