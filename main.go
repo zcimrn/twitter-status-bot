@@ -38,7 +38,6 @@ func monitorTelegram() {
 			log.Printf("telegram get updates error: '%s'", err)
 		}
 		for i := 0; i < len(updates); i++ {
-			log.Printf("exec command")
 			go commands.Exec(&updates[i].Message)
 			lastUpdateId = updates[i].Id
 		}
