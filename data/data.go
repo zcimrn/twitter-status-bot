@@ -81,7 +81,7 @@ func (data *Data) Init(fileName string) error {
 	data.LastIndex = -1
 	data.Users = nil
 	if err := data.load(); err != nil {
-		log.Printf("error: '%s'", err)
+		return err
 	}
 	if data.FileName == "" {
 		data.mutex.Unlock()
