@@ -54,7 +54,7 @@ func (data *Data) load() error {
 
 func (data *Data) save() error {
 	log.Printf("saving data to '%s'", data.FileName)
-	bytes, err := json.MarshalIndent(data, "", "  ")
+	bytes, err := json.MarshalIndent(data, "", "\t")
 	if err != nil {
 		return err
 	}
