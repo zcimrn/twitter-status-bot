@@ -11,20 +11,21 @@ import (
 var Data *data.Data
 
 func Exec(message *telegram.Message) {
-	log.Printf("[%d] message: '%s'", message.Chat.Id, message.Text)
-	if len(message.Text) == 0 {
-		log.Printf("error: 'message without text'")
-		return
-	}
-	if !Data.HasAdmin(message.From.Id) && !Data.HasAdmin(message.Chat.Id) {
-		log.Printf("error: 'permissions error'")
-		return
-	}
 	chatId := message.Chat.Id
+	userId := message.From.Id
 	messageId := message.Id
+	if len(message.Text) == 0 {
+		log.Printf("[%d] user %d error: 'message without text'", chatId, userId)
+		return
+	}
 	args := strings.Fields(message.Text)
 	command, _, _ := strings.Cut(strings.ToLower(args[0]), "@")
 	args = args[1:]
+	log.Printf("[%d] user %d command: '%s'", chatId, userId, command)
+	if !Data.HasAdmin(chatId) && !Data.HasAdmin(userId) {
+		log.Printf("[%d] user %d error: 'permission denied'", chatId, userId)
+		return
+	}
 	switch command {
 	case "/help":
 		help(chatId, messageId)
