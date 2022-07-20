@@ -11,11 +11,11 @@ import (
 var Data *data.Data
 
 func Exec(message *telegram.Message) {
+	log.Printf("[%d] message: '%s'", message.Chat.Id, message.Text)
 	if len(message.Text) == 0 {
 		log.Printf("error: 'message without text'")
 		return
 	}
-	log.Printf("message: '%s'", message.Text)
 	if !Data.HasAdmin(message.From.Id) && !Data.HasAdmin(message.Chat.Id) {
 		log.Printf("error: 'permissions error'")
 		return
