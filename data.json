@@ -1,0 +1,14 @@
+{
+	"file_name": "data.json",
+	"telegram_token": "your telegram token",
+	"twitter_token": "your twitter token",
+	"admins": [
+		{
+			"id": 0,
+			"desc": "the first admin"
+		}
+	],
+	"chats": null,
+	"last_user_index": -1,
+	"users": null
+}
