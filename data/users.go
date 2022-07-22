@@ -45,6 +45,24 @@ func (data *Data) UpdateUser(user *twitter.User) bool {
 	data.Users[i].Name = user.Name
 	data.Users[i].Initialized = user.Initialized
 	data.Users[i].Followings = user.Followings
+	// hot fix
+	var chatIds []int
+	for _, id := range data.Users[i].ChatIds {
+		i := sort.Search(len(data.Chats), func(i int) bool {
+			return data.Chats[i].Id >= id
+		})
+		if i < len(data.Chats) && data.Chats[i].Id == id {
+			chatIds = append(chatIds, id)
+		}
+	}
+	data.Users[i].ChatIds = chatIds
+	if len(chatIds) == 0 {
+		data.Users = append(data.Users[:i], data.Users[i+1:]...)
+		if data.LastIndex >= i {
+			data.LastIndex--
+		}
+	}
+	// hot fix
 	data.save()
 	data.mutex.Unlock()
 	return true
@@ -104,6 +122,18 @@ func (data *Data) GetNextUser() *twitter.User {
 		return nil
 	}
 	data.LastIndex = (data.LastIndex + 1) % len(data.Users)
+	// hot fix
+	var chatIds []int
+	for _, id := range data.Users[data.LastIndex].ChatIds {
+		i := sort.Search(len(data.Chats), func(i int) bool {
+			return data.Chats[i].Id >= id
+		})
+		if i < len(data.Chats) && data.Chats[i].Id == id {
+			chatIds = append(chatIds, id)
+		}
+	}
+	data.Users[data.LastIndex].ChatIds = chatIds
+	// hot fix
 	user := data.Users[data.LastIndex]
 	data.save()
 	data.mutex.Unlock()
