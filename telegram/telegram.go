@@ -57,12 +57,10 @@ func SendMessage(chatId int, text string, args ...int) error {
 	}
 	reqBody, err := json.Marshal(&jsonReq)
 	if err != nil {
-		log.Printf("error: '%s'", err)
 		return err
 	}
 	_, err = api("sendMessage", reqBody)
 	if err != nil {
-		log.Printf("error: '%s'", err)
 		return err
 	}
 	return nil
