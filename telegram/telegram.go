@@ -102,10 +102,10 @@ func SendUpdates(user *twitter.User, updates []twitter.User) {
 		for j := 0; j < 10 && i+j < len(updates); j++ {
 			text += "\n" + updates[i+j].Markdown()
 		}
-		for _, chatId := range user.GetChatIds() {
-			err := SendMessage(chatId, text)
+		for _, id := range user.GetChatIds() {
+			err := SendMessage(id, text)
 			if err != nil {
-				log.Printf("send message error: '%s'", err)
+				log.Printf("[%s] chat %d send message error: '%s'", user.Username, id, err)
 			}
 		}
 	}
