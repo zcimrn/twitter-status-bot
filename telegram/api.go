@@ -8,16 +8,16 @@ import (
 	"net/http"
 )
 
-func TestToken(token string) bool {
+func TestToken(token string) error {
 	resp, err := http.Get("https://api.telegram.org/bot" + token + "/getMe")
 	if err != nil {
-		return false
+		return err
 	}
 	resp.Body.Close()
 	if resp.StatusCode != 200 {
-		return false
+		return fmt.Errorf("bad status code: '%d'", resp.StatusCode)
 	}
-	return true
+	return nil
 }
 
 func api(method string, reqBody []byte) ([]byte, error) {

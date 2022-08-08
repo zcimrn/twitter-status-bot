@@ -91,9 +91,9 @@ func (data *Data) Init(fileName string) error {
 		data.mutex.Unlock()
 		return fmt.Errorf("telegram_token is empty")
 	}
-	if !telegram.TestToken(data.TelegramToken) {
+	if err := telegram.TestToken(data.TelegramToken); err != nil {
 		data.mutex.Unlock()
-		return fmt.Errorf("telegram_token doesn't work")
+		return err
 	}
 	telegram.SetToken(data.TelegramToken)
 	if data.TwitterToken == "" {

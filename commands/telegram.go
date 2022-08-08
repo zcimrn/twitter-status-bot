@@ -17,7 +17,7 @@ func setTelegramToken(chatId, messageId int, args []string) {
 		return
 	}
 	token := args[0]
-	if !telegram.TestToken(token) {
+	if err := telegram.TestToken(token); err != nil {
 		telegram.SendMessage(chatId, fmt.Sprintf("Не удалось установить Telegram token:\n`%s`", tools.EscapeCode(token)), messageId)
 		return
 	}
