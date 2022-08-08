@@ -100,9 +100,9 @@ func (data *Data) Init(fileName string) error {
 		data.mutex.Unlock()
 		return fmt.Errorf("twitter_token is empty")
 	}
-	if !twitter.TestToken(data.TwitterToken) {
+	if err := twitter.TestToken(data.TwitterToken); err != nil {
 		data.mutex.Unlock()
-		return fmt.Errorf("twitter_token doesn't work")
+		return err
 	}
 	twitter.SetToken(data.TwitterToken)
 	if len(data.Admins) == 0 {

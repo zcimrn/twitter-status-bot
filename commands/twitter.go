@@ -18,7 +18,7 @@ func setTwitterToken(chatId, messageId int, args []string) {
 		return
 	}
 	token := args[0]
-	if !twitter.TestToken(token) {
+	if err := twitter.TestToken(token); err != nil {
 		telegram.SendMessage(chatId, fmt.Sprintf("Не удалось установить Twitter token:\n`%s`", tools.EscapeCode(token)), messageId)
 		return
 	}
